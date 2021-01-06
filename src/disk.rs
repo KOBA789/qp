@@ -52,14 +52,21 @@ pub struct DiskManager {
 }
 
 impl DiskManager {
+    pub fn new(data_file: File) -> std::io::Result<Self> {
+        let next_page_id = data_file.metadata()?.len() / PAGE_SIZE as u64;
+        Ok(Self {
+            data_file,
+            next_page_id,
+        })
+    }
+
     pub fn open(data_file_path: impl AsRef<Path>) -> std::io::Result<Self> {
         let data_file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .open(data_file_path)?;
-        let next_page_id = data_file.metadata()?.len() / PAGE_SIZE as u64;
-        Ok(Self { data_file, next_page_id })
+        Self::new(data_file)
     }
 
     pub fn read_page_data(&mut self, page_id: PageId, data: &mut [u8]) -> std::io::Result<()> {
