@@ -6,12 +6,12 @@ use std::{
 use parking_lot::RawRwLock;
 use thiserror::Error;
 
-use crate::lock::OwnedRwLockExt;
+use crate::latch::OwnedRwLockExt;
 use crate::{
     buffer::Page,
     buffer::{self, BufferPoolManager},
-    lock::OwnedRwLockReadGuard,
-    lock::OwnedRwLockWriteGuard,
+    latch::OwnedRwLockReadGuard,
+    latch::OwnedRwLockWriteGuard,
 };
 
 use super::disk::PageId;

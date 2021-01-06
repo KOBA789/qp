@@ -2,7 +2,7 @@ mod btree;
 mod buffer;
 mod disk;
 mod executor;
-mod lock;
+mod latch;
 mod query;
 mod slotted;
 
