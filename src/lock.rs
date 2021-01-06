@@ -13,8 +13,6 @@ where
     unsafe fn raw(&self) -> &R;
     unsafe fn read_guard_owned(self: Arc<Self>) -> OwnedRwLockReadGuard<R, T>;
     unsafe fn write_guard_owned(self: Arc<Self>) -> OwnedRwLockWriteGuard<R, T>;
-    #[allow(clippy::mut_from_ref)]
-    unsafe fn data<'a>(self: &'a Arc<Self>) -> &'a mut T;
 
     fn read_owned(self: Arc<Self>) -> OwnedRwLockReadGuard<R, T> {
         unsafe { self.raw().lock_shared() };
@@ -64,14 +62,6 @@ where
             marker: PhantomData,
         }
     }
-
-    unsafe fn data<'a>(self: &'a Arc<Self>) -> &'a mut T {
-        let ptr: *const RwLock<R, T> = Arc::as_ref(self);
-        (ptr as *mut RwLock<R, T>)
-            .as_mut()
-            .expect("Arc must not point to null")
-            .get_mut()
-    }
 }
 
 pub struct OwnedRwLockReadGuard<R, T>
@@ -90,7 +80,12 @@ where
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { self.rwlock.data() }
+        unsafe {
+            self.rwlock
+                .data_ptr()
+                .as_ref()
+                .expect("Arc must not point to null")
+        }
     }
 }
 
@@ -121,7 +116,12 @@ where
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { self.rwlock.data() }
+        unsafe {
+            self.rwlock
+                .data_ptr()
+                .as_ref()
+                .expect("Arc must not point to null")
+        }
     }
 }
 
@@ -130,7 +130,12 @@ where
     R: RawRwLock,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.rwlock.data() }
+        unsafe {
+            self.rwlock
+                .data_ptr()
+                .as_mut()
+                .expect("Arc must not point to null")
+        }
     }
 }
 
