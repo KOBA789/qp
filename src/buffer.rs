@@ -160,6 +160,7 @@ impl BufferPoolManager {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempfile;
     use super::*;
 
     #[test]
@@ -171,7 +172,7 @@ mod tests {
         world.extend_from_slice(b"world");
         world.resize(PAGE_SIZE, 0);
 
-        let disk = DiskManager::open("buffer_test.qp").unwrap();
+        let disk = DiskManager::new(tempfile().unwrap()).unwrap();
         let pool = BufferPool::new(1);
         let bufmgr = BufferPoolManager::new(disk, pool);
         let page1_id = {

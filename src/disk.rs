@@ -1,4 +1,7 @@
-use std::{convert::{TryFrom, TryInto}, io::{SeekFrom, prelude::*}};
+use std::{
+    convert::{TryFrom, TryInto},
+    io::{prelude::*, SeekFrom},
+};
 use std::{fs::File, fs::OpenOptions, path::Path};
 
 pub const PAGE_SIZE: usize = 4096;
@@ -93,10 +96,12 @@ impl DiskManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test() {
-        let mut disk = DiskManager::open("disk_test.qp").unwrap();
+        let (data_file, data_file_path) = NamedTempFile::new().unwrap().into_parts();
+        let mut disk = DiskManager::new(data_file).unwrap();
         let mut hello = Vec::with_capacity(PAGE_SIZE);
         hello.extend_from_slice(b"hello");
         hello.resize(PAGE_SIZE, 0);
@@ -108,7 +113,7 @@ mod tests {
         let world_page_id = disk.allocate_page();
         disk.write_page_data(world_page_id, &world).unwrap();
         drop(disk);
-        let mut disk2 = DiskManager::open("disk_test.qp").unwrap();
+        let mut disk2 = DiskManager::open(&data_file_path).unwrap();
         let mut buf = vec![0; PAGE_SIZE];
         disk2.read_page_data(hello_page_id, &mut buf).unwrap();
         assert_eq!(hello, buf);

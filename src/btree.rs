@@ -174,7 +174,9 @@ impl<'a> Access<'a> {
                 })
             }
             node::Node::Branch(branch) => {
-                let index = key.map(|key| branch.find(key)).unwrap_or_else(|| branch.num_pairs() - 1);
+                let index = key
+                    .map(|key| branch.find(key))
+                    .unwrap_or_else(|| branch.num_pairs() - 1);
                 let child_page_id = branch.pair(index).child();
                 let child_node_page = self.bufmgr.fetch_page(child_page_id)?.read_owned();
                 drop(node_page);
@@ -353,13 +355,14 @@ impl<'a> IterRev<'a> {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempfile;
+
     use crate::{buffer::BufferPool, disk::DiskManager};
 
     use super::*;
     #[test]
     fn test() {
-        std::fs::remove_file("btree_test.qp").ok();
-        let disk = DiskManager::open("btree_test.qp").unwrap();
+        let disk = DiskManager::new(tempfile().unwrap()).unwrap();
         let pool = BufferPool::new(10);
         let bufmgr = BufferPoolManager::new(disk, pool);
         let btree_access = Access::create(&bufmgr).unwrap();
@@ -379,8 +382,7 @@ mod tests {
 
     #[test]
     fn test_split() {
-        std::fs::remove_file("btree_test2.qp").ok();
-        let disk = DiskManager::open("btree_test2.qp").unwrap();
+        let disk = DiskManager::new(tempfile().unwrap()).unwrap();
         let pool = BufferPool::new(10);
         let bufmgr = BufferPoolManager::new(disk, pool);
         let btree_access = Access::create(&bufmgr).unwrap();
@@ -399,8 +401,7 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        std::fs::remove_file("btree_test3.qp").ok();
-        let disk = DiskManager::open("btree_test2.qp").unwrap();
+        let disk = DiskManager::new(tempfile().unwrap()).unwrap();
         let pool = BufferPool::new(10);
         let bufmgr = BufferPoolManager::new(disk, pool);
         let btree_access = Access::create(&bufmgr).unwrap();
@@ -430,8 +431,7 @@ mod tests {
 
     #[test]
     fn test_rev_iter() {
-        std::fs::remove_file("btree_test4.qp").ok();
-        let disk = DiskManager::open("btree_test2.qp").unwrap();
+        let disk = DiskManager::new(tempfile().unwrap()).unwrap();
         let pool = BufferPool::new(10);
         let bufmgr = BufferPoolManager::new(disk, pool);
         let btree_access = Access::create(&bufmgr).unwrap();
