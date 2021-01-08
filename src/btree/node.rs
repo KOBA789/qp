@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified};
 
 use super::branch::Branch;
@@ -86,6 +84,7 @@ impl<T> Node<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn try_into_branch(self) -> Result<Branch<T>, Self> {
         match self {
             Node::Branch(branch) => Ok(branch),

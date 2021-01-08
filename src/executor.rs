@@ -70,7 +70,7 @@ impl Executor {
         Ok(PutItemOutput)
     }
 
-    fn delete_item(&self, input: DeleteItemInput) -> Result<DeleteItemOutput, anyhow::Error> {
+    fn delete_item(&self, _input: DeleteItemInput) -> Result<DeleteItemOutput, anyhow::Error> {
         todo!();
     }
 
