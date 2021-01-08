@@ -84,7 +84,10 @@ impl DiskManager {
     pub fn write_page_data(&mut self, page_id: PageId, data: &[u8]) -> std::io::Result<()> {
         let offset = PAGE_SIZE as u64 * page_id.0;
         self.data_file.seek(SeekFrom::Start(offset))?;
-        self.data_file.write_all(data)?;
+        self.data_file.write_all(data)
+    }
+
+    pub fn flush(&mut self) -> std::io::Result<()> {
         self.data_file.flush()?;
         self.data_file.sync_all()
     }

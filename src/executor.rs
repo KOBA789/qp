@@ -117,7 +117,7 @@ impl Executor {
     }
 
     fn flush(&self, _input: FlushInput) -> Result<query::FlushOutput, anyhow::Error> {
-        self.bufmgr.flush();
+        self.bufmgr.flush()?;
         Ok(FlushOutput)
     }
 }

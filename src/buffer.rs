@@ -144,17 +144,18 @@ impl BufferPoolManager {
         Ok((page_id, page))
     }
 
-    pub fn flush(&self) {
+    pub fn flush(&self) -> Result<(), Error> {
         let locked_pool = self.pool.lock();
         let mut locked_disk = self.disk.lock();
         for (page_id, frame_id) in locked_pool.page_table.iter() {
             let frame = &locked_pool.frames[frame_id.0];
             let mut rw_page = frame.body.write();
             locked_disk
-                .write_page_data(*page_id, &rw_page.data)
-                .unwrap();
+                .write_page_data(*page_id, &rw_page.data)?;
             rw_page.is_dirty = false;
         }
+        locked_disk.flush()?;
+        Ok(())
     }
 }
 
