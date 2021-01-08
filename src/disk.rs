@@ -4,9 +4,12 @@ use std::{
 };
 use std::{fs::File, fs::OpenOptions, path::Path};
 
+use zerocopy::{AsBytes, FromBytes};
+
 pub const PAGE_SIZE: usize = 4096;
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, FromBytes, AsBytes)]
+#[repr(C)]
 pub struct PageId(pub u64);
 impl PageId {
     pub const CATALOG_PAGE_ID: PageId = PageId(0);

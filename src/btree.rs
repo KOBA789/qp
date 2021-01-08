@@ -67,7 +67,7 @@ impl<'a> Access<'a> {
         };
         let (root_page_id, root_page) = bufmgr.create_page()?;
         let mut root_page = root_page.write_owned();
-        let mut root = node::NodePage::<&mut _>::new(&mut root_page.data);
+        let mut root = node::NodePage::new(root_page.data.as_mut_slice()).unwrap();
         let mut leaf = root.initialize_as_leaf();
         leaf.initialize();
         btree.set_root_page_id(root_page_id);
@@ -90,7 +90,7 @@ impl<'a> Access<'a> {
         key: Key,
         buf: &mut Vec<u8>,
     ) -> Result<bool, Error> {
-        let node = node::NodePage::<&_>::new(&node_page.data);
+        let node = node::NodePage::new(node_page.data.as_slice()).unwrap();
         match node.node() {
             node::Node::Leaf(leaf) => Ok(leaf.get(key).map(|value| buf.extend(value)).is_some()),
             node::Node::Branch(branch) => {
@@ -119,7 +119,7 @@ impl<'a> Access<'a> {
         node_page: OwnedRwLockReadGuard<RawRwLock, Page>,
         key: Option<Key>,
     ) -> Result<Iter<'a>, Error> {
-        let node = node::NodePage::<&_>::new(&node_page.data);
+        let node = node::NodePage::new(node_page.data.as_slice()).unwrap();
         match node.node() {
             node::Node::Leaf(leaf) => {
                 let start = key
@@ -157,16 +157,16 @@ impl<'a> Access<'a> {
         node_page: OwnedRwLockReadGuard<RawRwLock, Page>,
         key: Option<Key>,
     ) -> Result<IterRev<'a>, Error> {
-        let node = node::NodePage::<&_>::new(&node_page.data);
+        let node = node::NodePage::new(node_page.data.as_slice()).unwrap();
         match node.node() {
             node::Node::Leaf(leaf) => {
                 let start = key
                     .map(|key| {
                         leaf.find(key)
-                            .map(|index| index as i16)
-                            .unwrap_or_else(|index| index as i16 - 1)
+                            .map(|index| index as isize)
+                            .unwrap_or_else(|index| index as isize - 1)
                     })
-                    .unwrap_or_else(|| leaf.num_records() as i16 - 1);
+                    .unwrap_or_else(|| leaf.num_records() as isize - 1);
                 Ok(IterRev {
                     bufmgr: &self.bufmgr,
                     index: start,
@@ -203,7 +203,7 @@ impl<'a> Access<'a> {
         key: Key,
         value: &[u8],
     ) -> Result<Option<(Key, PageId)>, Error> {
-        let mut node = node::NodePage::<&mut _>::new(&mut page.data);
+        let mut node = node::NodePage::new(page.data.as_mut_slice()).unwrap();
         match node.node_mut() {
             node::Node::Leaf(mut leaf) => {
                 if leaf.put(key, value) {
@@ -224,7 +224,8 @@ impl<'a> Access<'a> {
                     let (new_leaf_page_id, new_leaf_page) = self.bufmgr.create_page()?;
 
                     if let Some(mut next_leaf_page) = next_leaf_page {
-                        let mut node_page = node::NodePage::<&mut _>::new(&mut next_leaf_page.data);
+                        let mut node_page =
+                            node::NodePage::new(next_leaf_page.data.as_mut_slice()).unwrap();
                         let mut next_leaf = node_page.node_mut().try_into_leaf().ok().unwrap();
                         next_leaf.set_prev_page_id(Some(new_leaf_page_id));
                     }
@@ -232,7 +233,7 @@ impl<'a> Access<'a> {
 
                     let mut new_leaf_page = new_leaf_page.write_owned();
                     let mut new_leaf_node_page =
-                        node::NodePage::<&mut _>::new(&mut new_leaf_page.data);
+                        node::NodePage::new(new_leaf_page.data.as_mut_slice()).unwrap();
                     let mut new_leaf = new_leaf_node_page.initialize_as_leaf();
                     new_leaf.initialize();
                     let new_leaf_first_key = leaf.split_put(&mut new_leaf, key, value);
@@ -254,7 +255,7 @@ impl<'a> Access<'a> {
                         let (new_branch_page_id, new_branch_page) = self.bufmgr.create_page()?;
                         let mut new_branch_page = new_branch_page.write_owned();
                         let mut new_branch_node_page =
-                            node::NodePage::<&mut _>::new(&mut new_branch_page.data);
+                            node::NodePage::new(new_branch_page.data.as_mut_slice()).unwrap();
                         let mut new_branch = new_branch_node_page.initialize_as_branch();
                         let overflow_key = branch.split(&mut new_branch);
                         page.is_dirty = true;
@@ -280,7 +281,7 @@ impl<'a> Access<'a> {
         if let Some((key, child)) = self.put_internal(root_page_id, root_page, key, value)? {
             let (new_root_page_id, new_root_page) = self.bufmgr.create_page()?;
             let mut new_root_page = new_root_page.write_owned();
-            let mut node_page = node::NodePage::<&mut _>::new(&mut new_root_page.data);
+            let mut node_page = node::NodePage::new(new_root_page.data.as_mut_slice()).unwrap();
             let mut branch = node_page.initialize_as_branch();
             branch.initialize(key, root_page_id, child);
             btree.set_root_page_id(new_root_page_id);
@@ -293,17 +294,17 @@ impl<'a> Access<'a> {
 pub struct Iter<'a> {
     bufmgr: &'a BufferPoolManager,
     page: Option<OwnedRwLockReadGuard<RawRwLock, Page>>,
-    index: u16,
+    index: usize,
 }
 impl<'a> Iter<'a> {
     pub fn next(&mut self, buf: &mut Vec<u8>) -> Result<Option<Key>, Error> {
         if let Some(page) = &self.page {
-            let node_page = node::NodePage::<&_>::new(&page.data);
+            let node_page = node::NodePage::new(page.data.as_slice()).unwrap();
             let leaf = node_page.node().try_into_leaf().ok().unwrap();
             if self.index < leaf.num_records() {
                 let record = leaf.record(self.index);
                 self.index += 1;
-                buf.extend(record.value());
+                buf.extend(record.value);
                 Ok(Some(record.key()))
             } else {
                 self.page = match leaf.next_page_id() {
@@ -322,25 +323,25 @@ impl<'a> Iter<'a> {
 pub struct IterRev<'a> {
     bufmgr: &'a BufferPoolManager,
     page: Option<OwnedRwLockReadGuard<RawRwLock, Page>>,
-    index: i16,
+    index: isize,
 }
 impl<'a> IterRev<'a> {
     pub fn next(&mut self, buf: &mut Vec<u8>) -> Result<Option<Key>, Error> {
         if let Some(page) = &self.page {
-            let node_page = node::NodePage::<&_>::new(&page.data);
+            let node_page = node::NodePage::new(page.data.as_slice()).unwrap();
             let leaf = node_page.node().try_into_leaf().ok().unwrap();
             if self.index >= 0 {
-                let record = leaf.record(self.index as u16);
+                let record = leaf.record(self.index as usize);
                 self.index -= 1;
-                buf.extend(record.value());
+                buf.extend(record.value);
                 Ok(Some(record.key()))
             } else {
                 self.page = match leaf.prev_page_id() {
                     Some(prev_page_id) => {
                         let prev_page = self.bufmgr.fetch_page(prev_page_id)?.read_owned();
-                        let node_page = node::NodePage::<&_>::new(&prev_page.data);
+                        let node_page = node::NodePage::new(prev_page.data.as_slice()).unwrap();
                         let leaf = node_page.node().try_into_leaf().ok().unwrap();
-                        self.index = leaf.num_records() as i16 - 1;
+                        self.index = leaf.num_records() as isize - 1;
                         Some(prev_page)
                     }
                     None => None,

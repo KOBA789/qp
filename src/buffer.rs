@@ -19,14 +19,14 @@ pub struct FrameId(usize);
 #[derive(Debug)]
 pub struct Page {
     pub is_dirty: bool,
-    pub data: [u8; PAGE_SIZE],
+    pub data: Vec<u8>,
 }
 
 impl Default for Page {
     fn default() -> Self {
         Self {
             is_dirty: false,
-            data: [0u8; PAGE_SIZE],
+            data: vec![0u8; PAGE_SIZE],
         }
     }
 }
